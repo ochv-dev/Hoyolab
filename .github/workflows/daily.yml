@@ -1,0 +1,24 @@
+name: Auto Check-in
+
+on:
+  schedule:
+    # Ejecutar a las 13:15 hora Chile (aprox)
+    - cron: '15 16-23 * * *'
+  workflow_dispatch: # Botón manual
+
+jobs:
+  run-script:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      - name: Install requests
+        run: pip install requests
+      - name: Run Script
+        env:
+          LTOKEN: ${{ secrets.LTOKEN }}
+          LTUID: ${{ secrets.LTUID }}
+        run: python main.py
