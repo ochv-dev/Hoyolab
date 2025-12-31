@@ -3,70 +3,71 @@ import requests
 import time
 import random
 
-# 1. CARGA DE SECRETOS (Desde la configuración de GitHub)
+# --- CONFIGURACIÓN ---
 ltoken = os.environ.get("LTOKEN")
 ltuid = os.environ.get("LTUID")
+cookie_token = os.environ.get("COOKIE_TOKEN") # <--- AQUI ESTA LA MAGIA
 
-# ID del evento de Genshin Impact (Sacado de tu link)
+# ID del evento de Genshin (Global)
 ACT_ID = "e202102251931481" 
 
-# URLs oficiales de Hoyoverse
 url_info = f"https://sg-public-api.hoyolab.com/event/luna/os/info?lang=es-es&act_id={ACT_ID}"
 url_sign = f"https://sg-public-api.hoyolab.com/event/luna/os/sign?lang=es-es&act_id={ACT_ID}"
 
-# Cabeceras para simular ser un navegador
+# Construimos la cookie maestra con todas las piezas
+# Nota: account_id_v2 suele ser el mismo que ltuid_v2
+cookie_str = f"ltoken_v2={ltoken}; ltuid_v2={ltuid}; cookie_token_v2={cookie_token}; account_id_v2={ltuid};"
+
 headers = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36",
-    "Cookie": f"ltoken_v2={ltoken}; ltuid_v2={ltuid};",
+    "Cookie": cookie_str,
     "Origin": "https://act.hoyolab.com",
     "Referer": "https://act.hoyolab.com/"
 }
 
 def main():
-    # --- PASO 1: VERIFICAR SI YA COBRASTE ---
+    print(f"🔍 Conectando como usuario: {ltuid}...")
+
+    # 1. VERIFICAR
     try:
-        print(f"🔍 Conectando con Hoyolab para el usuario {ltuid}...")
         resp = requests.get(url_info, headers=headers)
         data = resp.json()
         
-        # Si el servidor responde algo raro
-        if data["retcode"] != 0:
-            print(f"❌ Error al obtener información: {data['message']}")
+        if data.get("retcode") != 0:
+            print(f"❌ Error al leer estado: {data.get('message')}")
+            print("👉 Pista: Si dice 'No has iniciado sesión', revisa que copiaste bien el cookie_token")
             return
 
-        # Si ya cobraste hoy, nos detenemos
         if data["data"]["is_sign"]:
-            print("✅ ¡Misión cumplida! Ya habías cobrado hoy. No hago nada.")
+            print("✅ Hoy YA has cobrado. ¡Vuelve mañana!")
             return
         
     except Exception as e:
         print(f"⚠️ Error de conexión: {e}")
         return
 
-    # --- PASO 2: ALEATORIEDAD (Para parecer humano) ---
-    # Tiramos un dado del 1 al 100
+    # 2. DECIDIR (ALEATORIEDAD)
+    # Para probar HOY, forzamos que se ejecute (probabilidad > 0)
     chance = random.randint(1, 100)
-    print(f"🎲 El dado de la suerte sacó: {chance}")
+    print(f"🎲 Dado: {chance}")
     
-    # Si sale mayor a 50, esperamos a la próxima hora (50% de probabilidad de espera)
-    # NOTA: GitHub ejecutará esto cada hora. Eventualmente el dado saldrá menor a 50.
-    if chance > 50:
-        print("⏸️ Decisión: Esperaré a la siguiente hora para que sea más aleatorio.")
-        return 
+    # En producción real, descomenta esto para que a veces espere:
+    # if chance > 80: 
+    #    print("⏸️ Decisión: Esperaré a la siguiente hora.")
+    #    return 
 
-    # --- PASO 3: COBRAR LA RECOMPENSA ---
-    print("🚀 Ejecutando cobro de recompensa...")
-    
-    # Esperamos unos segundos falsos antes de enviar el clic
+    # 3. COBRAR
+    print("🚀 Intentando cobrar recompensa...")
     time.sleep(random.randint(2, 5)) 
     
     response = requests.post(url_sign, headers=headers)
     result = response.json()
     
-    if result["retcode"] == 0:
-        print("🎉 ¡ÉXITO! Recompensa reclamada correctamente.")
+    # Manejo de respuestas
+    if result.get("retcode") == 0:
+        print("🎉 ¡ÉXITO! Recompensa reclamada.")
     else:
-        print(f"⚠️ Ocurrió un problema al reclamar: {result['message']}")
+        print(f"⚠️ Respuesta del servidor: {result.get('message')}")
 
 if __name__ == "__main__":
     main()
